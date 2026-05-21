@@ -95,10 +95,17 @@ def startup_event():
             )
         """))
     
-    # Enable generator if files already exist
+    # Enable generator if files or existing transaction data are present.
     global generator_active
     files = glob.glob("temp_*.csv")
-    if files:
+    transaction_count = 0
+    try:
+        with engine.connect() as conn:
+            transaction_count = conn.execute(text("SELECT COUNT(*) FROM transactions")).scalar() or 0
+    except Exception:
+        transaction_count = 0
+
+    if files or transaction_count > 0:
         generator_active = True
     else:
         generator_active = False
