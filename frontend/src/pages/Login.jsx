@@ -3,6 +3,7 @@ import axios from "axios";
 import "../styles/Login.css";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import { API_URL } from "../config";
 
 function Login() {
   const [username, setUsername] = useState("");
@@ -28,7 +29,7 @@ function Login() {
       formData.append("password", loginPassword);
 
       const res = await axios.post(
-        "http://127.0.0.1:8000/login",
+        `${API_URL}/login`,
         formData
       );
 

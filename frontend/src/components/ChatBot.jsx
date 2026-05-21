@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import axios from "axios";
 import { motion, AnimatePresence } from "framer-motion";
+import { API_URL } from "../config";
 
 const ChatBot = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -34,7 +35,7 @@ const ChatBot = () => {
     try {
       const token = localStorage.getItem("token");
       const res = await axios.post(
-        "http://127.0.0.1:8000/api/chat",
+        `${API_URL}/api/chat`,
         { message: userMsg.content },
         { headers: { Authorization: `Bearer ${token}` } },
       );

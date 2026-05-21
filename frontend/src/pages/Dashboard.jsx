@@ -4,6 +4,7 @@ import axios from "axios";
 import "../styles/Dashboard.css";
 import { ComposedChart, Area, Bar, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { motion, AnimatePresence } from "framer-motion";
+import { API_URL, WS_URL } from "../config";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },
@@ -51,7 +52,7 @@ function Dashboard() {
     }
     
     // Live WebSocket Stream
-    const ws = new WebSocket("ws://127.0.0.1:8000/ws/transactions");
+    const ws = new WebSocket(`${WS_URL}/ws/transactions`);
     ws.onmessage = (event) => {
       try {
         const msg = JSON.parse(event.data);
@@ -77,11 +78,11 @@ function Dashboard() {
   const fetchAdminData = async () => {
     try {
       const [uRes, sRes, aRes, hRes, fRes] = await Promise.all([
-        axios.get("http://127.0.0.1:8000/users", { headers }),
-        axios.get("http://127.0.0.1:8000/admin-stats", { headers }),
-        axios.get("http://127.0.0.1:8000/alerts", { headers }),
-        axios.get("http://127.0.0.1:8000/upload-history", { headers }),
-        axios.get("http://127.0.0.1:8000/files", { headers })
+        axios.get(`${API_URL}/users`, { headers }),
+        axios.get(`${API_URL}/admin-stats`, { headers }),
+        axios.get(`${API_URL}/alerts`, { headers }),
+        axios.get(`${API_URL}/upload-history`, { headers }),
+        axios.get(`${API_URL}/files`, { headers })
       ]);
       setUsers(uRes.data);
       setStats(sRes.data);
@@ -95,7 +96,7 @@ function Dashboard() {
 
   const fetchOperatorFiles = async () => {
     try {
-      const res = await axios.get("http://127.0.0.1:8000/files", { headers });
+      const res = await axios.get(`${API_URL}/files`, { headers });
       setOpFiles(res.data);
     } catch (err) {
       console.error("Error fetching files", err);
@@ -104,7 +105,7 @@ function Dashboard() {
 
   const fetchData = async (endpoint) => {
     try {
-      const res = await axios.get(`http://127.0.0.1:8000/${endpoint}`, { headers });
+      const res = await axios.get(`${API_URL}/${endpoint}`, { headers });
       setData(res.data);
     } catch (err) {
       if (err.response && err.response.status === 401) {
@@ -124,7 +125,7 @@ function Dashboard() {
     const formData = new FormData();
     formData.append("file", file);
     try {
-      await axios.post("http://127.0.0.1:8000/upload", formData, { headers: { ...headers } });
+      await axios.post(`${API_URL}/upload`, formData, { headers: { ...headers } });
       alert("ETL Completed ✅");
       fetchOperatorFiles();
       if (role === "operator") {
@@ -143,7 +144,7 @@ function Dashboard() {
 
   const deleteFile = async (filename) => {
     try {
-      await axios.delete(`http://127.0.0.1:8000/delete-file/${filename}`, { headers });
+      await axios.delete(`${API_URL}/delete-file/${filename}`, { headers });
       if (role === "admin") {
         fetchAdminData();
       } else {
@@ -167,7 +168,7 @@ function Dashboard() {
       return;
     }
     try {
-      await axios.post("http://127.0.0.1:8000/add-user", newUser, { headers });
+      await axios.post(`${API_URL}/add-user`, newUser, { headers });
       setNewUser({ username: "", password: "", role: "analyst" });
       setShowAddUser(false);
       fetchAdminData();
@@ -178,7 +179,7 @@ function Dashboard() {
 
   const handleDeleteUser = async (id) => {
     try {
-      await axios.delete(`http://127.0.0.1:8000/delete-user/${id}`, { headers });
+      await axios.delete(`${API_URL}/delete-user/${id}`, { headers });
       fetchAdminData();
     } catch (err) {
       alert("Failed to delete user");
@@ -187,7 +188,7 @@ function Dashboard() {
 
   const handleExport = async () => {
     try {
-      const res = await axios.get("http://127.0.0.1:8000/export-data", {
+      const res = await axios.get(`${API_URL}/export-data`, {
         headers,
         responseType: "blob",
       });

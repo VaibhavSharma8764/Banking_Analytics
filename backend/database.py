@@ -1,6 +1,11 @@
+import os
+
+from dotenv import load_dotenv
 from sqlalchemy import create_engine
 
-DATABASE_URL = "postgresql://postgres:FinData123@localhost/finops"
+load_dotenv()
+
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:FinData123@localhost/finops")
 
 engine = create_engine(
     DATABASE_URL,

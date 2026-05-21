@@ -3,6 +3,7 @@ import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import "../styles/Dashboard.css"; // Reuse dashboard styles for consistency
+import { API_URL } from "../config";
 
 const AnalystAI = () => {
     const [messages, setMessages] = useState([
@@ -38,7 +39,7 @@ const AnalystAI = () => {
 
         try {
             const token = localStorage.getItem('token');
-            const res = await axios.post('http://127.0.0.1:8000/api/chat', 
+            const res = await axios.post(`${API_URL}/api/chat`, 
                 { message: userMsg.content },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
