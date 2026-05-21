@@ -43,6 +43,34 @@ app.add_middleware(
 def startup_event():
     with engine.begin() as conn:
         conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS users (
+                id SERIAL PRIMARY KEY,
+                username VARCHAR(50) UNIQUE NOT NULL,
+                password VARCHAR(255) NOT NULL,
+                role VARCHAR(20) NOT NULL
+            )
+        """))
+        default_users = [
+            {"username": "admin", "password": "admin123", "role": "admin"},
+            {"username": "operator", "password": "operator123", "role": "operator"},
+            {"username": "analyst", "password": "analyst123", "role": "analyst"},
+        ]
+        for default_user in default_users:
+            existing_user = conn.execute(
+                text("SELECT id FROM users WHERE username = :username"),
+                {"username": default_user["username"]},
+            ).fetchone()
+            if not existing_user:
+                conn.execute(
+                    text("INSERT INTO users (username, password, role) VALUES (:username, :password, :role)"),
+                    {
+                        "username": default_user["username"],
+                        "password": get_password_hash(default_user["password"]),
+                        "role": default_user["role"],
+                    },
+                )
+
+        conn.execute(text("""
             CREATE TABLE IF NOT EXISTS transactions (
                 id SERIAL PRIMARY KEY,
                 transaction_id VARCHAR(50),
