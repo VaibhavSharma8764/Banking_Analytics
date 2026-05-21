@@ -53,11 +53,21 @@ function Dashboard() {
     
     // Live WebSocket Stream
     const ws = new WebSocket(`${WS_URL}/ws/transactions`);
+    let keepAliveInterval;
+    ws.onopen = () => {
+      keepAliveInterval = window.setInterval(() => {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send("ping");
+        }
+      }, 25000);
+    };
     ws.onmessage = (event) => {
       try {
         const msg = JSON.parse(event.data);
         if (msg.type === "new_transaction") {
           setLiveStream((prev) => [msg.data, ...prev].slice(0, 10));
+        } else if (msg.type === "recent_transactions") {
+          setLiveStream((msg.data || []).slice(0, 10));
         } else if (msg.type === "transactions_pruned") {
           setData((prev) => prev.slice(0, Math.max(prev.length - msg.deleted, 0)));
         } else if (msg.type === "reset_data") {
@@ -68,7 +78,10 @@ function Dashboard() {
         }
       } catch (err) {}
     };
-    return () => ws.close();
+    return () => {
+      if (keepAliveInterval) window.clearInterval(keepAliveInterval);
+      ws.close();
+    };
   }, [role]);
 
   const headers = { Authorization: `Bearer ${token}` };

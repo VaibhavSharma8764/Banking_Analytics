@@ -24,6 +24,7 @@ groq_client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 
 app = FastAPI()
 generator_active = False # will show file only if it exists
+generator_task = None
 TRANSACTION_LIMIT = 1000
 OLD_TRANSACTION_DELETE_COUNT = 800
 
@@ -40,7 +41,7 @@ app.add_middleware(
 
 
 @app.on_event("startup")
-def startup_event():
+async def startup_event():
     with engine.begin() as conn:
         conn.execute(text("""
             CREATE TABLE IF NOT EXISTS users (
@@ -110,7 +111,9 @@ def startup_event():
     else:
         generator_active = False
         
-    asyncio.create_task(mock_transaction_generator())
+    global generator_task
+    if generator_task is None or generator_task.done():
+        generator_task = asyncio.create_task(mock_transaction_generator())
 
 @app.get("/")
 def home():
@@ -498,6 +501,26 @@ class ConnectionManager:
 manager = ConnectionManager()
 
 
+def get_recent_transactions(limit: int = 10):
+    try:
+        with engine.connect() as conn:
+            result = conn.execute(
+                text("""
+                    SELECT transaction_id, amount, status, transaction_date, branch, processing_time, transaction_size
+                    FROM transactions
+                    ORDER BY id DESC
+                    LIMIT :limit
+                """),
+                {"limit": limit},
+            ).fetchall()
+
+        cols = ["transaction_id", "amount", "status", "transaction_date", "branch", "processing_time", "transaction_size"]
+        return [dict(zip(cols, row)) for row in result]
+    except Exception as e:
+        print(f"Recent transaction fetch error: {e}")
+        return []
+
+
 def prune_old_transactions(conn):
     total = conn.execute(text("SELECT COUNT(*) FROM transactions")).scalar() or 0
     if total < TRANSACTION_LIMIT:
@@ -518,6 +541,7 @@ def prune_old_transactions(conn):
 @app.websocket("/ws/transactions")
 async def websocket_endpoint(websocket: WebSocket):
     await manager.connect(websocket)
+    await websocket.send_json({"type": "recent_transactions", "data": get_recent_transactions()})
     try:
         while True:
             await websocket.receive_text()
