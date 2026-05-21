@@ -1,0 +1,1 @@
+[{"name": "id", "type": "integer"}, {"name": "transaction_id", "type": "character varying"}, {"name": "amount", "type": "double precision"}, {"name": "status", "type": "character varying"}, {"name": "transaction_date", "type": "timestamp without time zone"}, {"name": "branch", "type": "character varying"}, {"name": "processing_time", "type": "double precision"}]
