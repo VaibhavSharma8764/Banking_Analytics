@@ -88,17 +88,28 @@ function Dashboard() {
       fetchData(currentEndpoint);
     }
 
-    // Live WebSocket Stream
-    const ws = new WebSocket(`${WS_URL}/ws/transactions`);
+    // Live WebSocket Stream with Auto-Reconnect
+    let ws;
     let keepAliveInterval;
-    ws.onopen = () => {
-      keepAliveInterval = window.setInterval(() => {
-        if (ws.readyState === WebSocket.OPEN) {
-          ws.send("ping");
-        }
-      }, 25000);
-    };
-    ws.onmessage = (event) => {
+    let reconnectTimeout;
+
+    const connectWebSocket = () => {
+      ws = new WebSocket(`${WS_URL}/ws/transactions`);
+      
+      ws.onopen = () => {
+        keepAliveInterval = window.setInterval(() => {
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send("ping");
+          }
+        }, 25000);
+      };
+
+      ws.onclose = () => {
+        if (keepAliveInterval) window.clearInterval(keepAliveInterval);
+        reconnectTimeout = setTimeout(connectWebSocket, 3000);
+      };
+
+      ws.onmessage = (event) => {
       try {
         const msg = JSON.parse(event.data);
         if (msg.type === "new_transaction") {
@@ -127,9 +138,12 @@ function Dashboard() {
         }
       } catch (err) {}
     };
+    connectWebSocket();
+
     return () => {
       if (keepAliveInterval) window.clearInterval(keepAliveInterval);
-      ws.close();
+      if (reconnectTimeout) clearTimeout(reconnectTimeout);
+      if (ws) ws.close();
     };
   }, [role, currentEndpoint]);
 

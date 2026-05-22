@@ -500,26 +500,29 @@ def get_files(user=Depends(get_current_user)):
 @app.get("/sample-file")
 async def get_sample_file(user=Depends(get_current_user)):
     """Serve the sample transaction file for testing"""
-    try:
-        sample_path = "temp_sample_transactions.csv"
-        if not os.path.exists(sample_path):
-            raise HTTPException(status_code=404, detail="Sample file not found")
-        
-        # Read file content
-        with open(sample_path, 'rb') as f:
-            file_content = f.read()
-        
-        # Return as file download
-        return StreamingResponse(
-            iter([file_content]),
-            media_type="text/csv",
-            headers={"Content-Disposition": "attachment; filename=sample_transactions.csv"}
-        )
-    except HTTPException:
-        raise
-    except Exception as e:
-        print(f"Sample file error: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve sample file: {str(e)}")
+    sample_data = (
+        "transaction_id,amount,status,transaction_date,branch,processing_time\n"
+        "TXN1001,1200.50,completed,2026-04-01 10:15:00,London,2.3\n"
+        "TXN1002,5400.00,failed,2026-04-01 11:20:00,Paris,5.8\n"
+        "TXN1003,2300.75,completed,2026-04-01 12:10:00,Barcelona,1.5\n"
+        "TXN1004,780.00,pending,2026-04-01 13:05:00,Berlin,3.2\n"
+        "TXN1005,8900.20,failed,2026-04-01 14:00:00,New York,6.1\n"
+        "TXN1006,150.00,completed,2026-04-01 14:30:00,Tokyo,0.9\n"
+        "TXN1007,3200.40,completed,2026-04-01 15:10:00,Singapore,4.5\n"
+        "TXN1008,6700.00,failed,2026-04-01 16:25:00,Dubai,5.9\n"
+        "TXN1009,210.10,pending,2026-04-01 17:00:00,Sydney,2.0\n"
+        "TXN1010,9999.99,completed,2026-04-01 18:15:00,Los Angeles,3.8\n"
+        "TXN1011,4500.00,failed,2026-04-02 09:10:00,London,6.5\n"
+        "TXN1012,300.00,completed,2026-04-02 10:20:00,Paris,1.2\n"
+        "TXN1013,7200.00,failed,2026-04-02 11:45:00,Barcelona,5.7\n"
+        "TXN1014,1800.00,completed,2026-04-02 12:30:00,Berlin,2.9\n"
+        "TXN1015,2500.00,pending,2026-04-02 13:15:00,New York,3.3\n"
+    )
+    return StreamingResponse(
+        iter([sample_data.encode('utf-8')]),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=sample_transactions.csv"}
+    )
 
 @app.delete("/delete-file/{filename}")
 async def delete_file(filename: str, user=Depends(get_current_user)):
