@@ -21,7 +21,7 @@ const AnalystAI = () => {
   const examplePrompts = [
     "Summarize me transaction database entries till this particular instant of time.",
     "Show me ratio of failed to successful transactions?",
-    "How many branches are there and how many failed vs all branches ?",
+    "How many branches are there and how many failed vs high value branches ?",
   ];
 
   useEffect(() => {
