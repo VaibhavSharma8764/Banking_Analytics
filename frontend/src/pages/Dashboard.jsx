@@ -260,10 +260,12 @@ function Dashboard() {
     formData.append("file", uploadedFile);
     try {
       await axios.post(`${API_URL}/upload`, formData, {
-        headers: { ...headers },
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
       addToast(
-        `✓ File "${uploadedFile.name}" uploaded successfully! Now analyzing transactions...`,
+        `✓ File "${uploadedFile.name}" uploaded successfully! Now analyst will analyse this file.`,
         "success",
       );
 
@@ -286,6 +288,7 @@ function Dashboard() {
           .catch((err) => console.error("Failed to fetch live feed", err));
       }, 500);
     } catch (err) {
+      console.error("Upload error:", err);
       if (err.response && err.response.status === 401) {
         addToast(
           "Upload failed: Session expired. Please log in again.",
@@ -293,7 +296,9 @@ function Dashboard() {
         );
         handleLogout();
       } else {
-        addToast("Upload failed. Please try again.", "error");
+        const errorMsg =
+          err.response?.data?.detail || "Upload failed. Please try again.";
+        addToast(errorMsg, "error");
       }
     }
   };
@@ -306,7 +311,10 @@ function Dashboard() {
 
     try {
       await axios.delete(`${API_URL}/delete-file/${filename}`, { headers });
-      addToast(`✓ File "${filename}" deleted. Analysis reset to zero.`, "info");
+      addToast(
+        `✓ File "${filename}" deleted. Operator will upload new file.`,
+        "info",
+      );
 
       if (role === "admin") {
         fetchAdminData();
@@ -376,6 +384,7 @@ function Dashboard() {
 
   const useSampleFile = async () => {
     try {
+      addToast("Loading sample file...", "info");
       const res = await axios.get(`${API_URL}/sample-file`, {
         headers,
         responseType: "blob",
@@ -386,7 +395,12 @@ function Dashboard() {
       await uploadFile(sampleFile);
       setShowSampleModal(false);
     } catch (err) {
-      addToast("Failed to load sample file", "error");
+      console.error("Sample file error:", err);
+      const errorMsg =
+        err.response?.data?.detail ||
+        err.message ||
+        "Failed to load sample file";
+      addToast(`Error: ${errorMsg}`, "error");
     }
   };
 

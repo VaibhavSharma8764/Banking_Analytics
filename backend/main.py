@@ -161,57 +161,63 @@ def guest_login():
 
 @app.post("/upload")
 async def upload_file(file: UploadFile = File(...), user=Depends(get_current_user)):
-    file_path = f"temp_{file.filename}"
+    try:
+        file_path = f"temp_{file.filename}"
 
-    with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
 
-    with engine.begin() as conn:
-        conn.execute(text("""
-            CREATE TABLE IF NOT EXISTS transactions (
-                id SERIAL PRIMARY KEY,
-                transaction_id VARCHAR(50),
-                amount FLOAT,
-                status VARCHAR(20),
-                transaction_date VARCHAR(50),
-                branch VARCHAR(50),
-                processing_time FLOAT,
-                transaction_size VARCHAR(20)
+        with engine.begin() as conn:
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS transactions (
+                    id SERIAL PRIMARY KEY,
+                    transaction_id VARCHAR(50),
+                    amount FLOAT,
+                    status VARCHAR(20),
+                    transaction_date VARCHAR(50),
+                    branch VARCHAR(50),
+                    processing_time FLOAT,
+                    transaction_size VARCHAR(20)
+                )
+            """))
+
+        # Run ETL pipeline
+        run_etl(file_path)
+        
+        filesize = os.path.getsize(file_path)
+        mock_records = max(1, filesize // 50) 
+
+        with engine.begin() as conn:
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS upload_history (
+                    id SERIAL PRIMARY KEY,
+                    filename VARCHAR(255),
+                    upload_time TIMESTAMP,
+                    records_processed INT
+                )
+            """))
+            conn.execute(
+                text("INSERT INTO upload_history (filename, upload_time, records_processed) VALUES (:filename, CURRENT_TIMESTAMP, :records)"),
+                {"filename": file.filename, "records": mock_records}
             )
-        """))
 
-    run_etl(file_path)
-    
-    filesize = os.path.getsize(file_path)
-    mock_records = max(1, filesize // 50) 
-
-
-    with engine.begin() as conn:
-        conn.execute(text("""
-            CREATE TABLE IF NOT EXISTS upload_history (
-                id SERIAL PRIMARY KEY,
-                filename VARCHAR(255),
-                upload_time TIMESTAMP,
-                records_processed INT
-            )
-        """))
-        conn.execute(
-            text("INSERT INTO upload_history (filename, upload_time, records_processed) VALUES (:filename, CURRENT_TIMESTAMP, :records)"),
-            {"filename": file.filename, "records": mock_records}
-        )
-
-    global generator_active
-    generator_active = True
-    
-    # Broadcast recent transactions to all connected clients
-    recent_tx = get_recent_transactions(limit=10)
-    await manager.broadcast({
-        "type": "recent_transactions", 
-        "data": recent_tx,
-        "message": f"New file uploaded: {file.filename}. Analysing transactions using analyst role."
-    })
-    
-    return {"message": "ETL Completed Successfully"}
+        global generator_active
+        generator_active = True
+        
+        # Get recent transactions to broadcast
+        recent_tx = get_recent_transactions(limit=10)
+        
+        # Broadcast message to all connected clients
+        await manager.broadcast({
+            "type": "recent_transactions", 
+            "data": recent_tx,
+            "message": f"✓ File '{file.filename}' uploaded successfully! Now analyst will analyse the data."
+        })
+        
+        return {"message": "ETL Completed Successfully", "records": mock_records}
+    except Exception as e:
+        print(f"Upload error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
 
 @app.get("/branch-workload")
 def get_branch_workload(user=Depends(get_current_user)):
@@ -497,13 +503,22 @@ async def get_sample_file(user=Depends(get_current_user)):
         sample_path = "temp_sample_transactions.csv"
         if not os.path.exists(sample_path):
             raise HTTPException(status_code=404, detail="Sample file not found")
+        
+        # Read file content
+        with open(sample_path, 'rb') as f:
+            file_content = f.read()
+        
+        # Return as file download
         return StreamingResponse(
-            iter([open(sample_path, 'rb').read()]),
+            iter([file_content]),
             media_type="text/csv",
             headers={"Content-Disposition": "attachment; filename=sample_transactions.csv"}
         )
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        print(f"Sample file error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve sample file: {str(e)}")
 
 @app.delete("/delete-file/{filename}")
 async def delete_file(filename: str, user=Depends(get_current_user)):
@@ -617,43 +632,56 @@ async def websocket_endpoint(websocket: WebSocket):
 
 async def mock_transaction_generator():
     while True:
-        await asyncio.sleep(4)
-        if not generator_active:
-            continue
-        
-        branches = ['North', 'South', 'East', 'West', 'New York', 'London', 'Tokyo']
-        statuses = ['pending', 'completed', 'completed', 'completed', 'failed']
-        
-        import datetime
-        now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        tx_id = f"TXN-{random.randint(10000, 99999)}"
-
-        new_tx = {
-            "transaction_id": tx_id,
-            "amount": round(random.uniform(10, 20000), 2),
-            "status": random.choice(statuses),
-            "transaction_date": now,
-            "branch": random.choice(branches),
-            "processing_time": round(random.uniform(0.1, 6.0), 2),
-            "transaction_size": "Medium"
-        }
-        
         try:
-            deleted_count = 0
-            with engine.begin() as conn:
-                conn.execute(
-                    text("""
-                        INSERT INTO transactions (transaction_id, amount, status, transaction_date, branch, processing_time, transaction_size) 
-                        VALUES (:transaction_id, :amount, :status, :transaction_date, :branch, :processing_time, :transaction_size)
-                    """),
-                    new_tx
-                )
-                deleted_count = prune_old_transactions(conn)
-            await manager.broadcast({"type": "new_transaction", "data": new_tx})
-            if deleted_count:
-                await manager.broadcast({"type": "transactions_pruned", "deleted": deleted_count})
+            await asyncio.sleep(4)
+            if not generator_active:
+                continue
+            
+            # Check if transactions table exists and has data
+            try:
+                with engine.connect() as conn:
+                    count = conn.execute(text("SELECT COUNT(*) FROM transactions")).scalar() or 0
+                    if count == 0:
+                        continue  # Skip if no transactions have been loaded yet
+            except Exception:
+                continue  # Skip if table doesn't exist
+            
+            branches = ['North', 'South', 'East', 'West', 'New York', 'London', 'Tokyo']
+            statuses = ['pending', 'completed', 'completed', 'completed', 'failed']
+            
+            import datetime
+            now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            tx_id = f"TXN-{random.randint(10000, 99999)}"
+
+            new_tx = {
+                "transaction_id": tx_id,
+                "amount": round(random.uniform(10, 20000), 2),
+                "status": random.choice(statuses),
+                "transaction_date": now,
+                "branch": random.choice(branches),
+                "processing_time": round(random.uniform(0.1, 6.0), 2),
+                "transaction_size": "Medium"
+            }
+            
+            try:
+                deleted_count = 0
+                with engine.begin() as conn:
+                    conn.execute(
+                        text("""
+                            INSERT INTO transactions (transaction_id, amount, status, transaction_date, branch, processing_time, transaction_size) 
+                            VALUES (:transaction_id, :amount, :status, :transaction_date, :branch, :processing_time, :transaction_size)
+                        """),
+                        new_tx
+                    )
+                    deleted_count = prune_old_transactions(conn)
+                await manager.broadcast({"type": "new_transaction", "data": new_tx})
+                if deleted_count:
+                    await manager.broadcast({"type": "transactions_pruned", "deleted": deleted_count})
+            except Exception as e:
+                print(f"Mock Tx Generator Error: {e}")
         except Exception as e:
-            print(f"Mock Tx Generator Error: {e}")
+            print(f"Mock generator outer exception: {e}")
+            await asyncio.sleep(1)
 
 
 
