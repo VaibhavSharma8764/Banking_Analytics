@@ -455,42 +455,48 @@ function Dashboard() {
               <h3>{recordTotal}</h3>
               <small style={{ color: "#94a3b8" }}>Showing latest {Math.min(data.length, 50)}</small>
             </motion.div>
-            <motion.div className="metric-card" variants={fadeUp} style={{ minHeight: "132px", padding: "22px 24px" }}>
+            <motion.div className="metric-card" variants={fadeUp} style={{ minHeight: "132px", padding: "22px 24px", overflow: "hidden" }}>
               <span>Transaction Summary</span>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "10px 14px", marginTop: "14px", color: "#f8fafc", fontSize: "0.95rem" }}>
-                <strong>All: {transactionSummary.all}</strong>
-                <strong style={{ color: "#ef4444" }}>Failed: {transactionSummary.failed}</strong>
-                <strong style={{ color: "#10b981" }}>Success: {transactionSummary.success}</strong>
-                <strong>High: {transactionSummary.high_value}</strong>
-                <strong>Pending: {transactionSummary.pending}</strong>
-                <strong>Suspicious: {transactionSummary.suspicious}</strong>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "10px 12px", marginTop: "14px", color: "#f8fafc", fontSize: "0.88rem", lineHeight: 1.2 }}>
+                <strong style={{ whiteSpace: "nowrap" }}>All: {transactionSummary.all}</strong>
+                <strong style={{ color: "#ef4444", whiteSpace: "nowrap" }}>Failed: {transactionSummary.failed}</strong>
+                <strong style={{ color: "#10b981", whiteSpace: "nowrap" }}>Success: {transactionSummary.success}</strong>
+                <strong style={{ whiteSpace: "nowrap" }}>High: {transactionSummary.high_value}</strong>
+                <strong style={{ whiteSpace: "nowrap" }}>Pending: {transactionSummary.pending}</strong>
+                <strong style={{ whiteSpace: "nowrap" }}>Suspicious: {transactionSummary.suspicious}</strong>
               </div>
             </motion.div>
             
             {/* Live Stream Ticker */}
-            <motion.div className="metric-card" variants={fadeUp} style={{overflow: "hidden", background: "rgba(16, 185, 129, 0.05)", border: "1px solid rgba(16, 185, 129, 0.2)", minHeight: "132px"}}>
+            <motion.div className="metric-card" variants={fadeUp} style={{overflow: "hidden", background: "rgba(16, 185, 129, 0.05)", border: "1px solid rgba(16, 185, 129, 0.2)", height: "132px", minHeight: "132px"}}>
                <span style={{color: "#10b981", fontSize: "0.8rem", fontWeight: "bold"}}>Live Transaction Feed</span>
-               <div style={{display: "flex", flexDirection: "column", gap: "8px", marginTop: "10px", overflow: "hidden"}}>
+               <div style={{display: "flex", flexDirection: "column", gap: "8px", marginTop: "10px", height: "78px", overflow: "hidden"}}>
                   <AnimatePresence initial={false}>
                      {liveStream.slice(0, 2).map((tx, idx) => (
                        <motion.div 
                          key={tx.transaction_id + idx} 
-                         initial={{opacity: 0, x: 20}} 
+                         layout={false}
+                         initial={{opacity: 0, x: 12}} 
                          animate={{opacity: 1, x: 0}} 
-                         exit={{opacity: 0, x: -20}} 
-                         transition={{duration: 0.3}} 
+                         exit={{opacity: 0, x: -12}} 
+                         transition={{duration: 0.25, ease: "easeOut"}} 
                          style={{
                            fontSize: "0.85rem", 
                            color: tx.status === "failed" ? "#ef4444" : "#f8fafc", 
                            display: "flex", 
-                           justifyContent: "space-between",
+                          justifyContent: "space-between",
+                          alignItems: "center",
                            background: "rgba(255,255,255,0.03)",
                            padding: "6px 10px",
                            borderRadius: "6px",
-                           borderLeft: `3px solid ${tx.status === "failed" ? "#ef4444" : "#10b981"}`
+                          borderLeft: `3px solid ${tx.status === "failed" ? "#ef4444" : "#10b981"}`,
+                          height: "35px",
+                          minHeight: "35px",
+                          maxHeight: "35px",
+                          overflow: "hidden"
                          }}
                        >
-                         <span>{tx.transaction_id} â€¢ {tx.branch}</span>
+                         <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: "8px" }}>{tx.transaction_id} • {tx.branch}</span>
                          <span style={{fontWeight: "bold"}}>${tx.amount}</span>
                        </motion.div>
                      ))}
@@ -705,3 +711,4 @@ function Dashboard() {
 }
 
 export default Dashboard;
+
