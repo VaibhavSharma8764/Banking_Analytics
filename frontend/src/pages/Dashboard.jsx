@@ -212,7 +212,7 @@ function Dashboard() {
     formData.append("file", file);
     try {
       await axios.post(`${API_URL}/upload`, formData, { headers: { ...headers } });
-      alert("ETL Completed ✅");
+      alert("ETL Completed");
       fetchOperatorFiles();
       if (role === "operator") {
         fetchData("upload-history");
@@ -223,7 +223,7 @@ function Dashboard() {
         alert("Upload failed: Session expired. Please log in again.");
         handleLogout();
       } else {
-        alert("Upload failed ❌");
+        alert("Upload failed");
       }
     }
   };
@@ -496,7 +496,7 @@ function Dashboard() {
                           overflow: "hidden"
                          }}
                        >
-                         <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: "8px" }}>{tx.transaction_id} � {tx.branch}</span>
+                         <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: "8px" }}>{tx.transaction_id} - {tx.branch}</span>
                          <span style={{fontWeight: "bold"}}>${tx.amount}</span>
                        </motion.div>
                      ))}
@@ -711,4 +711,5 @@ function Dashboard() {
 }
 
 export default Dashboard;
+
 
