@@ -252,7 +252,8 @@ function Dashboard() {
   };
 
   const uploadFile = async (fileToUpload = null) => {
-    const uploadedFile = fileToUpload || file;
+    const actualFile = (fileToUpload instanceof File || fileToUpload instanceof Blob) ? fileToUpload : null;
+    const uploadedFile = actualFile || file;
     if (!uploadedFile) {
       addToast("Please select a file first.", "warning");
       return;
@@ -889,7 +890,7 @@ function Dashboard() {
                 </p>
                 <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
                   {file && (
-                    <button className="upload-btn" onClick={uploadFile}>
+                    <button className="upload-btn" onClick={() => uploadFile()}>
                       Process & Upload
                     </button>
                   )}
