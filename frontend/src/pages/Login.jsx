@@ -4,6 +4,7 @@ import "../styles/Login.css";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { API_URL } from "../config";
+import { BarChart3, ShieldCheck, UploadCloud } from "lucide-react";
 
 function Login() {
   const [username, setUsername] = useState("");
@@ -11,9 +12,9 @@ function Login() {
   const navigate = useNavigate();
 
   const demoAccounts = [
-    { label: "Admin", username: "admin", password: "admin123" },
-    { label: "Operator", username: "operator", password: "operator123" },
-    { label: "Analyst", username: "analyst", password: "analyst123" }
+    { label: "Analyst", username: "analyst", password: "analyst123", Icon: BarChart3 },
+    { label: "Admin", username: "admin", password: "admin123", Icon: ShieldCheck },
+    { label: "Operator", username: "operator", password: "operator123", Icon: UploadCloud }
   ];
 
   const saveSession = (data) => {
@@ -112,6 +113,7 @@ function Login() {
                   className="quick-login-btn"
                   onClick={() => fillDemoAccount(account)}
                 >
+                  <account.Icon size={16} />
                   {account.label}
                 </button>
               ))}

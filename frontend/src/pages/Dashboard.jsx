@@ -5,6 +5,7 @@ import "../styles/Dashboard.css";
 import { ComposedChart, Area, Bar, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { motion, AnimatePresence } from "framer-motion";
 import { API_URL, WS_URL } from "../config";
+import { Bot } from "lucide-react";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },
@@ -425,9 +426,14 @@ function Dashboard() {
               fontWeight: "bold",
               marginTop: "10px",
               border: "none",
-              boxShadow: "0 4px 15px rgba(59, 130, 246, 0.2)"
+              boxShadow: "0 4px 15px rgba(59, 130, 246, 0.2)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "8px"
             }}
           >
+            <Bot size={18} />
             AI Assistant
           </button>
         </div>
@@ -443,15 +449,15 @@ function Dashboard() {
 
         {/* Analyst Metric Cards & Live Stream */}
         {(role === "analyst" || role === "guest") && (
-          <motion.div className="metrics-grid" variants={staggerContainer} initial="hidden" animate="visible" style={{gridTemplateColumns: "1fr 1fr 2fr"}}>
-            <motion.div className="metric-card" variants={fadeUp}>
+          <motion.div className="metrics-grid" variants={staggerContainer} initial="hidden" animate="visible" style={{gridTemplateColumns: "0.9fr 1.8fr 1.3fr", alignItems: "stretch"}}>
+            <motion.div className="metric-card" variants={fadeUp} style={{ minHeight: "132px" }}>
               <span>Total Records Displayed</span>
               <h3>{recordTotal}</h3>
               <small style={{ color: "#94a3b8" }}>Showing latest {Math.min(data.length, 50)}</small>
             </motion.div>
-            <motion.div className="metric-card" variants={fadeUp}>
+            <motion.div className="metric-card" variants={fadeUp} style={{ minHeight: "132px", padding: "22px 24px" }}>
               <span>Transaction Summary</span>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px", marginTop: "8px", color: "#f8fafc", fontSize: "0.85rem" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "10px 14px", marginTop: "14px", color: "#f8fafc", fontSize: "0.95rem" }}>
                 <strong>All: {transactionSummary.all}</strong>
                 <strong style={{ color: "#ef4444" }}>Failed: {transactionSummary.failed}</strong>
                 <strong style={{ color: "#10b981" }}>Success: {transactionSummary.success}</strong>
@@ -462,11 +468,11 @@ function Dashboard() {
             </motion.div>
             
             {/* Live Stream Ticker */}
-            <motion.div className="metric-card" variants={fadeUp} style={{overflow: "hidden", background: "rgba(16, 185, 129, 0.05)", border: "1px solid rgba(16, 185, 129, 0.2)"}}>
+            <motion.div className="metric-card" variants={fadeUp} style={{overflow: "hidden", background: "rgba(16, 185, 129, 0.05)", border: "1px solid rgba(16, 185, 129, 0.2)", minHeight: "132px"}}>
                <span style={{color: "#10b981", fontSize: "0.8rem", fontWeight: "bold"}}>Live Transaction Feed</span>
-               <div style={{display: "flex", flexDirection: "column", gap: "8px", marginTop: "10px", maxHeight: "80px", overflowY: "auto", paddingRight: "5px"}}>
+               <div style={{display: "flex", flexDirection: "column", gap: "8px", marginTop: "10px", overflow: "hidden"}}>
                   <AnimatePresence initial={false}>
-                     {liveStream.map((tx, idx) => (
+                     {liveStream.slice(0, 2).map((tx, idx) => (
                        <motion.div 
                          key={tx.transaction_id + idx} 
                          initial={{opacity: 0, x: 20}} 
