@@ -202,6 +202,15 @@ async def upload_file(file: UploadFile = File(...), user=Depends(get_current_use
 
     global generator_active
     generator_active = True
+    
+    # Broadcast recent transactions to all connected clients
+    recent_tx = get_recent_transactions(limit=10)
+    await manager.broadcast({
+        "type": "recent_transactions", 
+        "data": recent_tx,
+        "message": f"New file uploaded: {file.filename}. Analysing transactions using analyst role."
+    })
+    
     return {"message": "ETL Completed Successfully"}
 
 @app.get("/branch-workload")
@@ -480,6 +489,21 @@ def get_files(user=Depends(get_current_user)):
    
     files = glob.glob("temp_*.csv")
     return [{"filename": f, "size": f"{os.path.getsize(f) / 1024:.1f} KB"} for f in files]
+
+@app.get("/sample-file")
+async def get_sample_file(user=Depends(get_current_user)):
+    """Serve the sample transaction file for testing"""
+    try:
+        sample_path = "temp_sample_transactions.csv"
+        if not os.path.exists(sample_path):
+            raise HTTPException(status_code=404, detail="Sample file not found")
+        return StreamingResponse(
+            iter([open(sample_path, 'rb').read()]),
+            media_type="text/csv",
+            headers={"Content-Disposition": "attachment; filename=sample_transactions.csv"}
+        )
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 @app.delete("/delete-file/{filename}")
 async def delete_file(filename: str, user=Depends(get_current_user)):
