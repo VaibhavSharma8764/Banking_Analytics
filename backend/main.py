@@ -406,9 +406,13 @@ def admin_stats(user=Depends(get_current_user)):
         with engine.connect() as conn:
             total = conn.execute(text("SELECT COUNT(*) FROM transactions")).scalar() or 0
             failed = conn.execute(text("SELECT COUNT(*) FROM transactions WHERE LOWER(status) = 'failed'")).scalar() or 0
+            success = conn.execute(text("SELECT COUNT(*) FROM transactions WHERE LOWER(status) IN ('completed', 'success')")).scalar() or 0
+            pending = conn.execute(text("SELECT COUNT(*) FROM transactions WHERE LOWER(status) = 'pending'")).scalar() or 0
+            high_value = conn.execute(text("SELECT COUNT(*) FROM transactions WHERE amount > 3000")).scalar() or 0
+            suspicious = conn.execute(text("SELECT COUNT(*) FROM transactions WHERE LOWER(status) = 'failed' AND amount > 2000")).scalar() or 0
             branches = conn.execute(text("SELECT COUNT(DISTINCT branch) FROM transactions")).scalar() or 0
     except Exception:
-        total, failed, branches = 0, 0, 0
+        total, failed, success, pending, high_value, suspicious, branches = 0, 0, 0, 0, 0, 0, 0
     
     success_rate = 0
     if total > 0:
@@ -417,6 +421,10 @@ def admin_stats(user=Depends(get_current_user)):
     return {
         "total_transactions": total,
         "failed_transactions": failed,
+        "successful_transactions": success,
+        "pending_transactions": pending,
+        "high_value_transactions": high_value,
+        "suspicious_transactions": suspicious,
         "success_rate": f"{success_rate}%",
         "total_branches": branches
     }

@@ -233,6 +233,22 @@
   background: rgba(0,0,0,0.2);
 }
 
+.admin-table-section {
+  margin-top: 22px;
+}
+
+.admin-table-section + .admin-table-section {
+  margin-top: 32px;
+}
+
+.admin-section-heading {
+  margin: 0 0 12px 0;
+  color: #cbd5e1;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
 .table {
   width: 100%;
   border-collapse: collapse;

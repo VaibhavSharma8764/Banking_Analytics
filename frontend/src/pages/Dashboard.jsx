@@ -116,6 +116,14 @@ function Dashboard() {
     return () => window.clearInterval(intervalId);
   }, [role, currentEndpoint]);
 
+  useEffect(() => {
+    if (role !== "admin") return;
+
+    fetchAdminData();
+    const intervalId = window.setInterval(fetchAdminData, 4000);
+    return () => window.clearInterval(intervalId);
+  }, [role]);
+
   const headers = { Authorization: `Bearer ${token}` };
 
 
@@ -551,19 +559,35 @@ function Dashboard() {
             <div className="metrics-grid">
               <motion.div className="metric-card" variants={fadeUp}>
                 <span>Total Transactions</span>
-                <h3>{stats.total_transactions}</h3>
+                <h3>{stats.total_transactions || 0}</h3>
+              </motion.div>
+              <motion.div className="metric-card" variants={fadeUp}>
+                <span>Successful</span>
+                <h3 style={{color: "#10b981"}}>{stats.successful_transactions || 0}</h3>
               </motion.div>
               <motion.div className="metric-card" variants={fadeUp}>
                 <span>Failed</span>
-                <h3 style={{color: "#ef4444"}}>{stats.failed_transactions}</h3>
+                <h3 style={{color: "#ef4444"}}>{stats.failed_transactions || 0}</h3>
+              </motion.div>
+              <motion.div className="metric-card" variants={fadeUp}>
+                <span>Pending</span>
+                <h3 style={{color: "#f59e0b"}}>{stats.pending_transactions || 0}</h3>
               </motion.div>
               <motion.div className="metric-card" variants={fadeUp}>
                 <span>Success Rate</span>
-                <h3 style={{color: "#10b981"}}>{stats.success_rate}</h3>
+                <h3 style={{color: "#10b981"}}>{stats.success_rate || "0%"}</h3>
+              </motion.div>
+              <motion.div className="metric-card" variants={fadeUp}>
+                <span>High Value</span>
+                <h3>{stats.high_value_transactions || 0}</h3>
+              </motion.div>
+              <motion.div className="metric-card" variants={fadeUp}>
+                <span>Suspicious</span>
+                <h3 style={{color: "#ef4444"}}>{stats.suspicious_transactions || 0}</h3>
               </motion.div>
               <motion.div className="metric-card" variants={fadeUp}>
                 <span>Total Branches</span>
-                <h3>{stats.total_branches}</h3>
+                <h3>{stats.total_branches || 0}</h3>
               </motion.div>
             </div>
 
@@ -638,8 +662,9 @@ function Dashboard() {
             <motion.div className="card" variants={fadeUp}>
               <h2 style={{ marginBottom: "20px", color: "white" }}>Upload History & Data Reset</h2>
               
-              <div className="table-wrapper" style={{marginBottom: "30px"}}>
-                <h3 style={{marginBottom: "15px", color: "#94a3b8", fontSize: "1rem"}}>Active CSV Files (Delete to Reset Analysis)</h3>
+              <div className="admin-table-section">
+                <h3 className="admin-section-heading">Active CSV Files (Delete to Reset Analysis)</h3>
+                <div className="table-wrapper">
                 <table className="table">
                   <thead><tr><th>Filename</th><th>Size</th><th>Action</th></tr></thead>
                   <tbody>
@@ -653,10 +678,12 @@ function Dashboard() {
                     ))}
                   </tbody>
                 </table>
+                </div>
               </div>
               
-              <div className="table-wrapper">
-                <h3 style={{marginBottom: "15px", color: "#94a3b8", fontSize: "1rem"}}>Historical Ledgers</h3>
+              <div className="admin-table-section">
+                <h3 className="admin-section-heading">Historical Ledgers</h3>
+                <div className="table-wrapper">
                 <table className="table">
                   <thead><tr><th>Filename</th><th>Upload Time</th><th>Records Processed</th></tr></thead>
                   <tbody>
@@ -670,6 +697,7 @@ function Dashboard() {
                     ))}
                   </tbody>
                 </table>
+                </div>
               </div>
             </motion.div>
           </motion.div>
