@@ -24,11 +24,13 @@ function Dashboard() {
   const role = localStorage.getItem("role") || "Guest";
   const token = localStorage.getItem("token");
   const navigate = useNavigate();
+  const defaultEndpoint = "transactions";
 
 
   const [data, setData] = useState([]);
   const [file, setFile] = useState(null);
   const [liveStream, setLiveStream] = useState([]);
+  const [currentEndpoint, setCurrentEndpoint] = useState(defaultEndpoint);
   
 
 
@@ -48,7 +50,7 @@ function Dashboard() {
     } else if (role === "operator") {
       fetchOperatorFiles();
     } else if (role === "analyst" || role === "guest") {
-      fetchData("transactions");
+      fetchData(currentEndpoint);
     }
     
     // Live WebSocket Stream
@@ -66,6 +68,7 @@ function Dashboard() {
         const msg = JSON.parse(event.data);
         if (msg.type === "new_transaction") {
           setLiveStream((prev) => [msg.data, ...prev].slice(0, 10));
+          fetchData(currentEndpoint, { showErrors: false });
         } else if (msg.type === "recent_transactions") {
           setLiveStream((msg.data || []).slice(0, 10));
         } else if (msg.type === "transactions_pruned") {
@@ -82,7 +85,25 @@ function Dashboard() {
       if (keepAliveInterval) window.clearInterval(keepAliveInterval);
       ws.close();
     };
-  }, [role]);
+  }, [role, currentEndpoint]);
+
+  useEffect(() => {
+    if (role !== "analyst" && role !== "guest") return;
+
+    const refreshDashboard = async () => {
+      await fetchData(currentEndpoint, { showErrors: false });
+      try {
+        const res = await axios.get(`${API_URL}/transactions?limit=10`, { headers });
+        setLiveStream((res.data || []).slice(0, 10));
+      } catch (err) {
+        console.error("Live feed refresh failed", err);
+      }
+    };
+
+    refreshDashboard();
+    const intervalId = window.setInterval(refreshDashboard, 4000);
+    return () => window.clearInterval(intervalId);
+  }, [role, currentEndpoint]);
 
   const headers = { Authorization: `Bearer ${token}` };
 
@@ -116,18 +137,29 @@ function Dashboard() {
     }
   };
 
-  const fetchData = async (endpoint) => {
+  const endpointWithLimit = (endpoint) => {
+    if (!endpoint.startsWith("transactions")) return endpoint;
+    return `${endpoint}${endpoint.includes("?") ? "&" : "?"}limit=50`;
+  };
+
+  const fetchData = async (endpoint, options = {}) => {
+    const { showErrors = true } = options;
     try {
-      const res = await axios.get(`${API_URL}/${endpoint}`, { headers });
+      const res = await axios.get(`${API_URL}/${endpointWithLimit(endpoint)}`, { headers });
       setData(res.data);
     } catch (err) {
       if (err.response && err.response.status === 401) {
-        alert("Session expired. Please log in again.");
+        if (showErrors) alert("Session expired. Please log in again.");
         handleLogout();
-      } else {
+      } else if (showErrors) {
         alert("Error fetching data");
       }
     }
+  };
+
+  const selectDataView = (endpoint) => {
+    setCurrentEndpoint(endpoint);
+    fetchData(endpoint);
   };
 
   const uploadFile = async () => {
@@ -324,12 +356,12 @@ function Dashboard() {
         <div className="sidebar-nav">
           {(role === "analyst" || role === "guest") && (
             <>
-              <button onClick={() => fetchData("transactions")}>All Transactions</button>
-              <button onClick={() => fetchData("transactions?type=failed")}>Failed Transactions</button>
-              <button onClick={() => fetchData("transactions?type=success")}>Successful Transactions</button>
-              <button onClick={() => fetchData("transactions?type=high-value")}>High Value</button>
-              <button onClick={() => fetchData("transactions?type=suspicious")}>Suspicious</button>
-              <button onClick={() => fetchData("branch-workload")}>Branch Workload</button>
+              <button onClick={() => selectDataView("transactions")}>All Transactions</button>
+              <button onClick={() => selectDataView("transactions?type=failed")}>Failed Transactions</button>
+              <button onClick={() => selectDataView("transactions?type=success")}>Successful Transactions</button>
+              <button onClick={() => selectDataView("transactions?type=high-value")}>High Value</button>
+              <button onClick={() => selectDataView("transactions?type=suspicious")}>Suspicious</button>
+              <button onClick={() => selectDataView("branch-workload")}>Branch Workload</button>
               {role === "analyst" && (
                <button 
                 onClick={() => navigate("/analyst-ai")} 

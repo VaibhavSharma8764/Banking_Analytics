@@ -34,7 +34,7 @@ OLD_TRANSACTION_DELETE_COUNT = 800
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"], 
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -216,9 +216,10 @@ def get_branch_workload(user=Depends(get_current_user)):
         return []
 
 @app.get("/transactions")
-def get_transactions(type: str = "all", user=Depends(get_current_user)):
+def get_transactions(type: str = "all", limit: int = 50, user=Depends(get_current_user)):
     base_query = "SELECT * FROM transactions"
     params = {}
+    limit = max(1, min(limit, 50))
     
     if type == "failed":
         base_query += " WHERE status = 'failed'"
@@ -231,11 +232,12 @@ def get_transactions(type: str = "all", user=Depends(get_current_user)):
     elif type == "branch-workload":
         pass
 
-    query = text(base_query + " ORDER BY id DESC")
+    query = text(base_query + " ORDER BY id DESC LIMIT :limit")
+    params["limit"] = limit
     
     try:
         with engine.connect() as conn:
-            result = conn.execute(query).fetchall()
+            result = conn.execute(query, params).fetchall()
             cols = ["id", "transaction_id", "amount", "status", "transaction_date", "branch", "processing_time", "transaction_size"]
             return [dict(zip(cols, row)) for row in result]
     except Exception:
