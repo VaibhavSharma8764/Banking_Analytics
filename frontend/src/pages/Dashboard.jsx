@@ -94,7 +94,8 @@ function Dashboard() {
     let reconnectTimeout;
 
     const connectWebSocket = () => {
-      ws = new WebSocket(`${WS_URL}/ws/transactions`);
+      let wsUrl = API_URL.replace("http://", "ws://").replace("https://", "wss://");
+      ws = new WebSocket(`${wsUrl}/ws/transactions?token=${token}`);
       
       ws.onopen = () => {
         keepAliveInterval = window.setInterval(() => {

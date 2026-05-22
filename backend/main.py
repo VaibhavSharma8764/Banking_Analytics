@@ -620,7 +620,7 @@ def prune_old_transactions(conn):
             ORDER BY id ASC
             LIMIT :delete_count
         )
-    """), {"delete_count": OLD_TRANSACTION_DELETE_COUNT})
+    """), [{"delete_count": OLD_TRANSACTION_DELETE_COUNT}])
 
     return result.rowcount or OLD_TRANSACTION_DELETE_COUNT
 
@@ -675,7 +675,7 @@ async def mock_transaction_generator():
                             INSERT INTO transactions (transaction_id, amount, status, transaction_date, branch, processing_time, transaction_size) 
                             VALUES (:transaction_id, :amount, :status, :transaction_date, :branch, :processing_time, :transaction_size)
                         """),
-                        new_tx
+                        [new_tx]
                     )
                     deleted_count = prune_old_transactions(conn)
                 await manager.broadcast({"type": "new_transaction", "data": new_tx})
