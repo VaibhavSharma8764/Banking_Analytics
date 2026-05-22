@@ -215,6 +215,42 @@ def get_branch_workload(user=Depends(get_current_user)):
         print(f"Workload Error: {e}")
         return []
 
+@app.get("/transactions/summary")
+def get_transaction_summary(user=Depends(get_current_user)):
+    try:
+        with engine.connect() as conn:
+            return {
+                "all": conn.execute(text("SELECT COUNT(*) FROM transactions")).scalar() or 0,
+                "failed": conn.execute(text("SELECT COUNT(*) FROM transactions WHERE LOWER(status) = 'failed'")).scalar() or 0,
+                "success": conn.execute(text("SELECT COUNT(*) FROM transactions WHERE LOWER(status) IN ('completed', 'success')")).scalar() or 0,
+                "pending": conn.execute(text("SELECT COUNT(*) FROM transactions WHERE LOWER(status) = 'pending'")).scalar() or 0,
+                "high_value": conn.execute(text("SELECT COUNT(*) FROM transactions WHERE amount > 3000")).scalar() or 0,
+                "suspicious": conn.execute(text("SELECT COUNT(*) FROM transactions WHERE LOWER(status) = 'failed' AND amount > 2000")).scalar() or 0,
+                "branches": conn.execute(text("SELECT COUNT(DISTINCT branch) FROM transactions")).scalar() or 0,
+            }
+    except Exception as e:
+        print(f"Transaction summary error: {e}")
+        return {"all": 0, "failed": 0, "success": 0, "pending": 0, "high_value": 0, "suspicious": 0, "branches": 0}
+
+@app.get("/transactions/count")
+def get_transaction_count(type: str = "all", user=Depends(get_current_user)):
+    base_query = "SELECT COUNT(*) FROM transactions"
+
+    if type == "failed":
+        base_query += " WHERE LOWER(status) = 'failed'"
+    elif type == "success":
+        base_query += " WHERE LOWER(status) IN ('completed', 'success')"
+    elif type == "high-value":
+        base_query += " WHERE amount > 3000"
+    elif type == "suspicious":
+        base_query += " WHERE LOWER(status) = 'failed' AND amount > 2000"
+
+    try:
+        with engine.connect() as conn:
+            return {"total": conn.execute(text(base_query)).scalar() or 0}
+    except Exception:
+        return {"total": 0}
+
 @app.get("/transactions")
 def get_transactions(type: str = "all", limit: int = 50, user=Depends(get_current_user)):
     base_query = "SELECT * FROM transactions"
@@ -222,13 +258,13 @@ def get_transactions(type: str = "all", limit: int = 50, user=Depends(get_curren
     limit = max(1, min(limit, 50))
     
     if type == "failed":
-        base_query += " WHERE status = 'failed'"
+        base_query += " WHERE LOWER(status) = 'failed'"
     elif type == "success":
-        base_query += " WHERE status = 'completed' OR status = 'success'"
+        base_query += " WHERE LOWER(status) IN ('completed', 'success')"
     elif type == "high-value":
         base_query += " WHERE amount > 3000"
     elif type == "suspicious":
-        base_query += " WHERE status = 'failed' AND amount > 2000"
+        base_query += " WHERE LOWER(status) = 'failed' AND amount > 2000"
     elif type == "branch-workload":
         pass
 
@@ -242,25 +278,6 @@ def get_transactions(type: str = "all", limit: int = 50, user=Depends(get_curren
             return [dict(zip(cols, row)) for row in result]
     except Exception:
         return []
-
-@app.get("/transactions/count")
-def get_transaction_count(type: str = "all", user=Depends(get_current_user)):
-    base_query = "SELECT COUNT(*) FROM transactions"
-
-    if type == "failed":
-        base_query += " WHERE status = 'failed'"
-    elif type == "success":
-        base_query += " WHERE status = 'completed' OR status = 'success'"
-    elif type == "high-value":
-        base_query += " WHERE amount > 3000"
-    elif type == "suspicious":
-        base_query += " WHERE status = 'failed' AND amount > 2000"
-
-    try:
-        with engine.connect() as conn:
-            return {"total": conn.execute(text(base_query)).scalar() or 0}
-    except Exception:
-        return {"total": 0}
 
 
 

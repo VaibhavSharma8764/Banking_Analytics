@@ -29,6 +29,15 @@ function Dashboard() {
 
   const [data, setData] = useState([]);
   const [recordTotal, setRecordTotal] = useState(0);
+  const [transactionSummary, setTransactionSummary] = useState({
+    all: 0,
+    failed: 0,
+    success: 0,
+    pending: 0,
+    high_value: 0,
+    suspicious: 0,
+    branches: 0,
+  });
   const [file, setFile] = useState(null);
   const [liveStream, setLiveStream] = useState([]);
   const [currentEndpoint, setCurrentEndpoint] = useState(defaultEndpoint);
@@ -157,8 +166,11 @@ function Dashboard() {
     }
 
     try {
-      const res = await axios.get(`${API_URL}/transactions/count?type=${transactionType}`, { headers });
-      setRecordTotal(res.data.total || 0);
+      const res = await axios.get(`${API_URL}/transactions/summary`, { headers });
+      const summary = res.data || {};
+      setTransactionSummary(summary);
+      const summaryKey = transactionType === "high-value" ? "high_value" : transactionType;
+      setRecordTotal(summary[summaryKey] || 0);
     } catch (err) {
       console.error("Transaction count refresh failed", err);
     }
@@ -438,10 +450,15 @@ function Dashboard() {
               <small style={{ color: "#94a3b8" }}>Showing latest {Math.min(data.length, 50)}</small>
             </motion.div>
             <motion.div className="metric-card" variants={fadeUp}>
-              <span>System Status</span>
-              <h3 style={{ color: "#10b981", display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{width: "10px", height: "10px", borderRadius: "50%", background: "#10b981", display: "inline-block", animation: "pulse 2s infinite"}}></span> Live
-              </h3>
+              <span>Transaction Summary</span>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px", marginTop: "8px", color: "#f8fafc", fontSize: "0.85rem" }}>
+                <strong>All: {transactionSummary.all}</strong>
+                <strong style={{ color: "#ef4444" }}>Failed: {transactionSummary.failed}</strong>
+                <strong style={{ color: "#10b981" }}>Success: {transactionSummary.success}</strong>
+                <strong>High: {transactionSummary.high_value}</strong>
+                <strong>Pending: {transactionSummary.pending}</strong>
+                <strong>Suspicious: {transactionSummary.suspicious}</strong>
+              </div>
             </motion.div>
             
             {/* Live Stream Ticker */}
