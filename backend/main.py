@@ -606,23 +606,25 @@ def get_recent_transactions(limit: int = 10):
         print(f"Recent transaction fetch error: {e}")
         return []
 
-
-def prune_old_transactions(conn):
-    total = conn.execute(text("SELECT COUNT(*) FROM transactions")).scalar() or 0
-    if total < TRANSACTION_LIMIT:
+def prune_old_transactions():
+    """Prune old transactions - runs in its own transaction, PostgreSQL compatible."""
+    try:
+        with engine.begin() as conn:
+            total = conn.execute(text("SELECT COUNT(*) FROM transactions")).scalar() or 0
+            if total < TRANSACTION_LIMIT:
+                return 0
+            # PostgreSQL-compatible: use ctid to delete oldest rows
+            result = conn.execute(text("""
+                DELETE FROM transactions
+                WHERE ctid IN (
+                    SELECT ctid FROM transactions ORDER BY id ASC LIMIT :delete_count
+                )
+            """), {"delete_count": OLD_TRANSACTION_DELETE_COUNT})
+            return result.rowcount or 0
+    except Exception as e:
+        print(f"Prune error: {e}")
         return 0
 
-    result = conn.execute(text("""
-        DELETE FROM transactions
-        WHERE id IN (
-            SELECT id
-            FROM transactions
-            ORDER BY id ASC
-            LIMIT :delete_count
-        )
-    """), [{"delete_count": OLD_TRANSACTION_DELETE_COUNT}])
-
-    return result.rowcount or OLD_TRANSACTION_DELETE_COUNT
 
 @app.websocket("/ws/transactions")
 async def websocket_endpoint(websocket: WebSocket):
@@ -635,54 +637,70 @@ async def websocket_endpoint(websocket: WebSocket):
         manager.disconnect(websocket)
 
 async def mock_transaction_generator():
+    import datetime
     while True:
         try:
             await asyncio.sleep(4)
-            if not manager.active_connections:
-                continue
-            
+
             # Check if transactions table exists and has data
             try:
                 with engine.connect() as conn:
                     count = conn.execute(text("SELECT COUNT(*) FROM transactions")).scalar() or 0
                     if count == 0:
-                        continue  # Skip if no transactions have been loaded yet
+                        continue
             except Exception:
-                continue  # Skip if table doesn't exist
-            
+                continue
+
             branches = ['North', 'South', 'East', 'West', 'New York', 'London', 'Tokyo']
             statuses = ['pending', 'completed', 'completed', 'completed', 'failed']
-            
-            import datetime
+
             now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             tx_id = f"TXN-{random.randint(10000, 99999)}"
+            amount = round(random.uniform(10, 20000), 2)
+
+            if amount < 500:
+                tx_size = "Small"
+            elif amount < 2000:
+                tx_size = "Medium"
+            else:
+                tx_size = "Large"
 
             new_tx = {
                 "transaction_id": tx_id,
-                "amount": round(random.uniform(10, 20000), 2),
+                "amount": amount,
                 "status": random.choice(statuses),
                 "transaction_date": now,
                 "branch": random.choice(branches),
                 "processing_time": round(random.uniform(0.1, 6.0), 2),
-                "transaction_size": "Medium"
+                "transaction_size": tx_size
             }
-            
+
+            # INSERT in its own transaction so prune failures don't kill it
             try:
-                deleted_count = 0
                 with engine.begin() as conn:
                     conn.execute(
                         text("""
-                            INSERT INTO transactions (transaction_id, amount, status, transaction_date, branch, processing_time, transaction_size) 
+                            INSERT INTO transactions (transaction_id, amount, status, transaction_date, branch, processing_time, transaction_size)
                             VALUES (:transaction_id, :amount, :status, :transaction_date, :branch, :processing_time, :transaction_size)
                         """),
-                        [new_tx]
+                        {"transaction_id": new_tx["transaction_id"], "amount": new_tx["amount"],
+                         "status": new_tx["status"], "transaction_date": new_tx["transaction_date"],
+                         "branch": new_tx["branch"], "processing_time": new_tx["processing_time"],
+                         "transaction_size": new_tx["transaction_size"]}
                     )
-                    deleted_count = prune_old_transactions(conn)
-                await manager.broadcast({"type": "new_transaction", "data": new_tx})
-                if deleted_count:
-                    await manager.broadcast({"type": "transactions_pruned", "deleted": deleted_count})
             except Exception as e:
-                print(f"Mock Tx Generator Error: {e}")
+                print(f"Generator INSERT error: {e}")
+                continue
+
+            # Broadcast to any connected WebSocket clients
+            if manager.active_connections:
+                await manager.broadcast({"type": "new_transaction", "data": new_tx})
+
+            # Prune separately so it never kills the insert
+            deleted_count = prune_old_transactions()
+            if deleted_count and manager.active_connections:
+                await manager.broadcast({"type": "transactions_pruned", "deleted": deleted_count})
+
         except Exception as e:
             print(f"Mock generator outer exception: {e}")
             await asyncio.sleep(1)
