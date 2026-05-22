@@ -243,6 +243,25 @@ def get_transactions(type: str = "all", limit: int = 50, user=Depends(get_curren
     except Exception:
         return []
 
+@app.get("/transactions/count")
+def get_transaction_count(type: str = "all", user=Depends(get_current_user)):
+    base_query = "SELECT COUNT(*) FROM transactions"
+
+    if type == "failed":
+        base_query += " WHERE status = 'failed'"
+    elif type == "success":
+        base_query += " WHERE status = 'completed' OR status = 'success'"
+    elif type == "high-value":
+        base_query += " WHERE amount > 3000"
+    elif type == "suspicious":
+        base_query += " WHERE status = 'failed' AND amount > 2000"
+
+    try:
+        with engine.connect() as conn:
+            return {"total": conn.execute(text(base_query)).scalar() or 0}
+    except Exception:
+        return {"total": 0}
+
 
 
 
@@ -258,9 +277,6 @@ class ChatRequest(BaseModel):
 
 @app.post("/api/chat")
 def chat_with_data(request: ChatRequest, user=Depends(get_current_user)):
-    if user.get("role") != "analyst":
-        raise HTTPException(status_code=403, detail="Only analysts can access this feature")
-    
     # Reload env to ensure we have the latest key
     load_dotenv(override=True)
     api_key = os.getenv("GROQ_API_KEY")

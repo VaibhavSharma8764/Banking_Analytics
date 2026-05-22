@@ -28,6 +28,7 @@ function Dashboard() {
 
 
   const [data, setData] = useState([]);
+  const [recordTotal, setRecordTotal] = useState(0);
   const [file, setFile] = useState(null);
   const [liveStream, setLiveStream] = useState([]);
   const [currentEndpoint, setCurrentEndpoint] = useState(defaultEndpoint);
@@ -142,11 +143,38 @@ function Dashboard() {
     return `${endpoint}${endpoint.includes("?") ? "&" : "?"}limit=50`;
   };
 
+  const transactionTypeFromEndpoint = (endpoint) => {
+    if (!endpoint.startsWith("transactions")) return null;
+    const queryString = endpoint.split("?")[1];
+    return new URLSearchParams(queryString || "").get("type") || "all";
+  };
+
+  const fetchRecordTotal = async (endpoint) => {
+    const transactionType = transactionTypeFromEndpoint(endpoint);
+    if (!transactionType) {
+      setRecordTotal(data.length);
+      return;
+    }
+
+    try {
+      const res = await axios.get(`${API_URL}/transactions/count?type=${transactionType}`, { headers });
+      setRecordTotal(res.data.total || 0);
+    } catch (err) {
+      console.error("Transaction count refresh failed", err);
+    }
+  };
+
   const fetchData = async (endpoint, options = {}) => {
     const { showErrors = true } = options;
     try {
       const res = await axios.get(`${API_URL}/${endpointWithLimit(endpoint)}`, { headers });
       setData(res.data);
+      const transactionType = transactionTypeFromEndpoint(endpoint);
+      if (transactionType) {
+        fetchRecordTotal(endpoint);
+      } else {
+        setRecordTotal(res.data.length);
+      }
     } catch (err) {
       if (err.response && err.response.status === 401) {
         if (showErrors) alert("Session expired. Please log in again.");
@@ -197,6 +225,7 @@ function Dashboard() {
       }
       // Reset local states to zero/empty
       setData([]);
+      setRecordTotal(0);
       setStats({ total_transactions: 0, failed_transactions: 0, success_rate: "0%", total_branches: 0 });
       setAlerts([]);
       setLiveStream([]);
@@ -362,21 +391,6 @@ function Dashboard() {
               <button onClick={() => selectDataView("transactions?type=high-value")}>High Value</button>
               <button onClick={() => selectDataView("transactions?type=suspicious")}>Suspicious</button>
               <button onClick={() => selectDataView("branch-workload")}>Branch Workload</button>
-              {role === "analyst" && (
-               <button 
-                onClick={() => navigate("/analyst-ai")} 
-                style={{
-                  background: "linear-gradient(135deg, #3b82f6, #8b5cf6)",
-                  color: "white",
-                  fontWeight: "bold",
-                  marginTop: "10px",
-                  border: "none",
-                  boxShadow: "0 4px 15px rgba(59, 130, 246, 0.2)"
-                }}
-               >
-                 🤖 Talk to AI Assistant
-               </button>
-              )}
             </>
           )}
 
@@ -390,6 +404,20 @@ function Dashboard() {
               <button onClick={handleExport} style={{color: "#10b981", borderColor: "rgba(16, 185, 129, 0.2)"}}>Export CSV Report</button>
             </>
           )}
+
+          <button 
+            onClick={() => navigate("/analyst-ai")} 
+            style={{
+              background: "linear-gradient(135deg, #3b82f6, #8b5cf6)",
+              color: "white",
+              fontWeight: "bold",
+              marginTop: "10px",
+              border: "none",
+              boxShadow: "0 4px 15px rgba(59, 130, 246, 0.2)"
+            }}
+          >
+            AI Assistant
+          </button>
         </div>
 
         <button className="logout-btn" onClick={handleLogout}>Log Out</button>
@@ -406,7 +434,8 @@ function Dashboard() {
           <motion.div className="metrics-grid" variants={staggerContainer} initial="hidden" animate="visible" style={{gridTemplateColumns: "1fr 1fr 2fr"}}>
             <motion.div className="metric-card" variants={fadeUp}>
               <span>Total Records Displayed</span>
-              <h3>{data.length}</h3>
+              <h3>{recordTotal}</h3>
+              <small style={{ color: "#94a3b8" }}>Showing latest {Math.min(data.length, 50)}</small>
             </motion.div>
             <motion.div className="metric-card" variants={fadeUp}>
               <span>System Status</span>

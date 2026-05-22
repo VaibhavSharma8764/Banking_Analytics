@@ -39,6 +39,11 @@ function Login() {
     }
   };
 
+  const fillDemoAccount = (account) => {
+    setUsername(account.username);
+    setPassword(account.password);
+  };
+
   return (
     <div className="login-wrapper">
       <div className="login-content-wrapper" style={{ display: 'flex', alignItems: 'center', gap: '80px', maxWidth: '1000px', width: '90%', zIndex: 1 }}>
@@ -105,7 +110,7 @@ function Login() {
                   key={account.username}
                   type="button"
                   className="quick-login-btn"
-                  onClick={() => handleLogin(account.username, account.password)}
+                  onClick={() => fillDemoAccount(account)}
                 >
                   {account.label}
                 </button>

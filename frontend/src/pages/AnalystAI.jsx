@@ -14,9 +14,14 @@ const AnalystAI = () => {
     const messagesEndRef = useRef(null);
     const navigate = useNavigate();
     const role = localStorage.getItem("role");
+    const examplePrompts = [
+        "Summarize total transactions and failure rate.",
+        "Which branch has the highest transaction volume?",
+        "Show high-value failed transactions and explain the risk."
+    ];
 
     useEffect(() => {
-        if (role !== "analyst") {
+        if (!role) {
             navigate("/dashboard");
         }
     }, [role, navigate]);
@@ -52,6 +57,10 @@ const AnalystAI = () => {
         } finally {
             setIsLoading(false);
         }
+    };
+
+    const useExamplePrompt = (prompt) => {
+        setInput(prompt);
     };
 
     return (
@@ -117,7 +126,7 @@ const AnalystAI = () => {
                                     letterSpacing: '1px',
                                     textAlign: msg.role === 'user' ? 'right' : 'left'
                                 }}>
-                                    {msg.role === 'user' ? 'Analyst' : 'AI Intelligence'}
+                                    {msg.role === 'user' ? (role || 'User') : 'AI Intelligence'}
                                 </div>
                                 <div style={{
                                     backgroundColor: msg.role === 'user' ? '#3b82f6' : 'rgba(255,255,255,0.05)',
@@ -136,6 +145,27 @@ const AnalystAI = () => {
                         {isLoading && (
                             <div style={{ alignSelf: 'flex-start', color: '#3b82f6', fontSize: '1rem', display: 'flex', gap: '8px', padding: '10px' }}>
                                 <motion.span animate={{ opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 1.2 }}>Querying Database...</motion.span>
+                            </div>
+                        )}
+                        {messages.length === 1 && (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                                {examplePrompts.map((prompt) => (
+                                    <button
+                                        key={prompt}
+                                        onClick={() => useExamplePrompt(prompt)}
+                                        style={{
+                                            background: 'rgba(59, 130, 246, 0.08)',
+                                            border: '1px solid rgba(59, 130, 246, 0.25)',
+                                            color: '#bfdbfe',
+                                            padding: '10px 14px',
+                                            borderRadius: '10px',
+                                            cursor: 'pointer',
+                                            fontSize: '0.85rem'
+                                        }}
+                                    >
+                                        {prompt}
+                                    </button>
+                                ))}
                             </div>
                         )}
                         <div ref={messagesEndRef} />
