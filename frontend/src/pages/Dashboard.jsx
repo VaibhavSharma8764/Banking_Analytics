@@ -68,6 +68,7 @@ function Dashboard() {
   const [showAddUser, setShowAddUser] = useState(false);
   const [toasts, setToasts] = useState([]);
   const [showSampleModal, setShowSampleModal] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   const addToast = (message, type = "info") => {
     const id = Date.now();
@@ -256,16 +257,20 @@ function Dashboard() {
       addToast("Please select a file first.", "warning");
       return;
     }
+    console.log(
+      "Uploading file:",
+      uploadedFile && { name: uploadedFile.name, size: uploadedFile.size },
+    );
     const formData = new FormData();
     formData.append("file", uploadedFile);
     try {
-      await axios.post(`${API_URL}/upload`, formData, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      setUploading(true);
+      const res = await axios.post(`${API_URL}/upload`, formData, { headers });
+      console.log("Upload response:", res?.data);
+      const serverMsg = res?.data?.message || res?.data?.detail || null;
       addToast(
-        `✓ File "${uploadedFile.name}" uploaded successfully! Now analyst will analyse this file.`,
+        serverMsg ||
+          `✓ File "${uploadedFile.name}" uploaded successfully! Now analyst will analyse this file.`,
         "success",
       );
 
@@ -300,6 +305,8 @@ function Dashboard() {
           err.response?.data?.detail || "Upload failed. Please try again.";
         addToast(errorMsg, "error");
       }
+    } finally {
+      setUploading(false);
     }
   };
 
