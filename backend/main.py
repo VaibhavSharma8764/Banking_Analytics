@@ -215,7 +215,7 @@ async def upload_file(file: UploadFile = File(...), user=Depends(get_current_use
             "message": f"✓ File '{file.filename}' uploaded successfully! Now analyst will analyse the data."
         })
         
-        return {"message": "ETL Completed Successfully", "records": mock_records}
+        return {"message": "ETL Completed Successfully .Now DataAnalyst will begin analysis.", "records": mock_records}
     except Exception as e:
         print(f"Upload error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")

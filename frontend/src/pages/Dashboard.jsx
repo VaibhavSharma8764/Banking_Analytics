@@ -745,7 +745,7 @@ function Dashboard() {
               variants={fadeUp}
               style={{ minHeight: "132px" }}
             >
-              <span>Total Records Displayed</span>
+              <span>Total Records</span>
               <h3>{recordTotal}</h3>
               <small style={{ color: "#94a3b8" }}>
                 Showing latest {Math.min(data.length, 50)}
