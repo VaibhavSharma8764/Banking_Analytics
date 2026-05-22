@@ -168,6 +168,7 @@ async def upload_file(file: UploadFile = File(...), user=Depends(get_current_use
             shutil.copyfileobj(file.file, buffer)
 
         with engine.begin() as conn:
+            conn.execute(text("DROP TABLE IF EXISTS transactions"))
             conn.execute(text("""
                 CREATE TABLE IF NOT EXISTS transactions (
                     id SERIAL PRIMARY KEY,
@@ -634,7 +635,7 @@ async def mock_transaction_generator():
     while True:
         try:
             await asyncio.sleep(4)
-            if not generator_active:
+            if not manager.active_connections:
                 continue
             
             # Check if transactions table exists and has data

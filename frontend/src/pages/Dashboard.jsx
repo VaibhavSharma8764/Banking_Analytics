@@ -881,7 +881,13 @@ function Dashboard() {
                   Select CSV File
                   <input
                     type="file"
-                    onChange={(e) => setFile(e.target.files[0])}
+                    onChange={(e) => {
+                      const selectedFile = e.target.files[0];
+                      if (selectedFile) {
+                        setFile(selectedFile);
+                        uploadFile(selectedFile);
+                      }
+                    }}
                     accept=".csv"
                   />
                 </label>
@@ -889,104 +895,21 @@ function Dashboard() {
                   {file ? `Selected: ${file.name}` : "No file selected"}
                 </p>
                 <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
-                  {file && (
-                    <button className="upload-btn" onClick={() => uploadFile()}>
-                      Process & Upload
-                    </button>
-                  )}
+
                   <button
                     className="upload-btn"
                     style={{
                       background: "rgba(3, 182, 112, 0.3)",
                       border: "1px solid rgb(16, 185, 129)",
                     }}
-                    onClick={() => setShowSampleModal(true)}
+                    onClick={useSampleFile}
                   >
                     📄 Use Sample File
                   </button>
                 </div>
               </div>
 
-              <AnimatePresence>
-                {showSampleModal && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    style={{
-                      position: "fixed",
-                      inset: 0,
-                      background: "rgba(0,0,0,0.7)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      zIndex: 999,
-                    }}
-                    onClick={() => setShowSampleModal(false)}
-                  >
-                    <motion.div
-                      initial={{ scale: 0.9, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      exit={{ scale: 0.9, opacity: 0 }}
-                      onClick={(e) => e.stopPropagation()}
-                      style={{
-                        background: "rgba(15, 23, 42, 0.95)",
-                        border: "1px solid rgba(255,255,255,0.1)",
-                        borderRadius: "12px",
-                        padding: "30px",
-                        maxWidth: "400px",
-                        color: "white",
-                      }}
-                    >
-                      <h3 style={{ marginBottom: "15px" }}>
-                        Use Sample Transactions File?
-                      </h3>
-                      <p
-                        style={{
-                          color: "#94a3b8",
-                          marginBottom: "20px",
-                          lineHeight: 1.6,
-                        }}
-                      >
-                        This will load a pre-configured sample transaction file
-                        to test the system. Contains 15 sample transactions
-                        across multiple branches.
-                      </p>
-                      <div style={{ display: "flex", gap: "10px" }}>
-                        <button
-                          onClick={() => setShowSampleModal(false)}
-                          style={{
-                            flex: 1,
-                            padding: "10px",
-                            background: "rgba(255,255,255,0.1)",
-                            border: "1px solid rgba(255,255,255,0.2)",
-                            color: "white",
-                            borderRadius: "6px",
-                            cursor: "pointer",
-                          }}
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          onClick={useSampleFile}
-                          style={{
-                            flex: 1,
-                            padding: "10px",
-                            background: "#10b981",
-                            border: "none",
-                            color: "white",
-                            borderRadius: "6px",
-                            cursor: "pointer",
-                            fontWeight: "bold",
-                          }}
-                        >
-                          Load Sample
-                        </button>
-                      </div>
-                    </motion.div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+
             </motion.div>
 
             <motion.div className="card" variants={fadeUp}>
