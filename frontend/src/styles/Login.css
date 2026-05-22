@@ -115,7 +115,7 @@
 
 .quick-login-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(105px, 1fr));
   gap: 8px;
 }
 
@@ -130,6 +130,10 @@
   white-space: nowrap;
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.login-container .quick-login-btn svg {
+  flex: 0 0 auto;
 }
 
 .login-container .quick-login-btn:hover {
